@@ -6,7 +6,7 @@ from astropy.io import fits
 
 from .constants import *
 from .utils import gauss_fit
-from .spectra_utils import correct_to_rest
+from .spectra_utils import correct_to_rest, merge_echelle
 
 
 def __ensure_png_pdf(png, pdf):
@@ -86,8 +86,12 @@ def line_plot_from_file(filename, lines, out, name, png=True, pdf=False):
     hdul = fits.open(filename)
     data = hdul[0].data
 
+    print('Correcting spectrum to rest frame. (This could take a while)')
     w, f = correct_to_rest(data)
-    line_plot(w, f, lines, out, name, png=png, pdf=pdf)
+    prod = np.stack((w, f, data[4, :, :], data[8, :, :]))
+    print('Merging echelle spectra.')
+    waves, fluxes, _, _ = merge_echelle(prod, hdul[0].header)
+    line_plot(waves, fluxes, lines, out, name, png=png, pdf=pdf)
 
 
 def line_plot(waves, fluxes, lines, out, name, png=True, pdf=False):
@@ -115,6 +119,7 @@ def line_plot(waves, fluxes, lines, out, name, png=True, pdf=False):
 
     png = png if __ensure_png_pdf(png, pdf) else True
     for line in lines:
+        print(f'Plotting line {line}')
         f, ax = plt.subplots(figsize=(20, 10))
         ax.plot(waves, fluxes, c='k', lw=.85)
 
@@ -126,10 +131,10 @@ def line_plot(waves, fluxes, lines, out, name, png=True, pdf=False):
             ax = HeI_plot(ax)
         elif line == 'NaID1D2':
             ax = NaID1D2_plot(ax)
-    if png:
-        plt.savefig(f'{out}/{name}.png', bbox_inches='tight')
-    if pdf:
-        plt.savefig(f'{out}/{name}.pdf', bbox_inches='tight')
+        if png:
+            plt.savefig(f'{out}/{name}_{line}.png', bbox_inches='tight')
+        if pdf:
+            plt.savefig(f'{out}/{name}_{line}.pdf', bbox_inches='tight')
 
 
 def CaHK_plot(ax):
@@ -145,6 +150,7 @@ def CaHK_plot(ax):
     ax.axvline(CaH, c='red', ls='dashed')
 
     ax.set_xlim(3880, 4020)
+    ax.set_ylim(0)
 
     ax.set_title(r'Ca$_{\rm II}$ H+K',
                  fontname=fontname,
