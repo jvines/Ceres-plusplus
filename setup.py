@@ -22,7 +22,7 @@ setup(
     package_data={'cerespp': ['masks']},
     include_package_data=True,
     classifiers=[
-        'Programming Languge :: Python :: 3',
+        "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Topic :: Scientific/Engineering :: Astronomy"
