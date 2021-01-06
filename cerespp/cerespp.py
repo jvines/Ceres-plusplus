@@ -13,7 +13,7 @@ from .utils import get_line_flux
 from .constants import *
 
 
-def get_activities(files, out, save=False):
+def get_activities(files, out, mask='G2', save=False):
     """Main function.
 
     Parameters
@@ -67,7 +67,7 @@ def get_activities(files, out, save=False):
             nofwhm = True
         contrast.append(hdul[0].header['XC_MIN'])
 
-        w, f = correct_to_rest(data)
+        w, f = correct_to_rest(data, mask=mask)
 
         prod = np.stack((w, f, data[4, :, :], data[8, :, :]))
 
