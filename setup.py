@@ -30,6 +30,6 @@ setup(
     python_requires='>=3.6',
     requires=[
         "numpy", "scipy", "matplotlib", "astropy", "PyAstronomy",
-        "tabulate", "tqdm", "argparse", "termcolor"
+        "tabulate", "tqdm", "termcolor"
     ]
 )
