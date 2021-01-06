@@ -191,4 +191,4 @@ def get_activities(files, out, save=False):
             ).T
         np.savetxt(
             f'{out}.dat', data, header=header)
-        return data, header
+    return data, header
