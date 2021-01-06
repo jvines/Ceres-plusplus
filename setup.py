@@ -10,13 +10,13 @@ with open('README.md', 'r') as fh:
     long_description = fh.read()
     
 setup(
-    name='ceres-plusplus',
+    name='cerespp',
     version='0.0.1',
     author='Jose Vines',
     author_email='jose.vines@ug.uchile.cl',
     description='An extension to ceres.',
     long_description=long_description,
-    long_description_content='text/markdown',
+    long_description_content_type='text/markdown',
     url='https://github.com/jvines/Ceres-plusplus',
     packages=find_packages(),
     package_data={'cerespp': ['masks']},
