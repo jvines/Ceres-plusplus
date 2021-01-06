@@ -29,7 +29,7 @@ setup(
     ],
     python_requires='>=3.6',
     requires=[
-        "numpy", "scipy", "matplotlib", "astropy", "PyAstronomy",
-        "tabulate", "tqdm", "termcolor"
+        "numpy", "scipy", "matplotlib", "astropy", "PyAstronomy", "tqdm",
+        "termcolor"
     ]
 )
