@@ -9,9 +9,11 @@ from .cerespp import get_activities
 from .cpplots import ccf_gauss_plot
 from .cpplots import ccf_plot
 from .cpplots import line_plot
+from .cpplots import line_plot_from_file
 from .crosscorr import ccf
 from .crosscorr import ccf_fit
 from .spectra_utils import median_combine
 from .spectra_utils import median_combine_1d
 from .spectra_utils import merge_echelle
 from .spectra_utils import velocity_correction
+from .spectra_utils import correct_to_rest

@@ -2,9 +2,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import triang
 from termcolor import colored
+from astropy.io import fits
 
 from .constants import *
 from .utils import gauss_fit
+from .spectra_utils import correct_to_rest
 
 
 def __ensure_png_pdf(png, pdf):
@@ -61,6 +63,31 @@ def ccf_gauss_plot(name, rvs, cc, amp, rv, sig, off):
                   )
     ax = __setup_ticks(ax)
     plt.savefig(name + '_ccf_fit.pdf', bbox_inches='tight')
+
+
+def line_plot_from_file(filename, lines, out, name, png=True, pdf=False):
+    """Create a plot showing the selected lines.
+
+            Parameters
+            ----------
+            filename: str
+                The file name of the spectrum.
+            lines: str, array_like
+                A string with the line to plot or an array with the lines to plot.
+            out: str
+                The output location for the plot.
+            name: str
+                The name of the object.
+            png: bool, optional
+                Set to True to output plot in png. Default is True.
+            pdf: bool, optional
+                Set to True to output plot in pdf. Default is False
+            """
+    hdul = fits.open(filename)
+    data = hdul[0].data
+
+    w, f = correct_to_rest(data)
+    line_plot(w, f, lines, out, name, png=png, pdf=pdf)
 
 
 def line_plot(waves, fluxes, lines, out, name, png=True, pdf=False):
