@@ -65,61 +65,69 @@ def ccf_gauss_plot(name, rvs, cc, amp, rv, sig, off):
     plt.savefig(name + '_ccf_fit.pdf', bbox_inches='tight')
 
 
-def line_plot_from_file(filename, lines, out, name, png=True, pdf=False):
+def line_plot_from_file(filename, lines, out, name, png=True, pdf=False,
+                        verbose=False):
     """Create a plot showing the selected lines.
 
-            Parameters
-            ----------
-            filename: str
-                The file name of the spectrum.
-            lines: str, array_like
-                A string with the line to plot or an array with the lines to plot.
-            out: str
-                The output location for the plot.
-            name: str
-                The name of the object.
-            png: bool, optional
-                Set to True to output plot in png. Default is True.
-            pdf: bool, optional
-                Set to True to output plot in pdf. Default is False
-            """
+    Parameters
+    ----------
+    filename: str
+        The file name of the spectrum.
+    lines: str, array_like
+        A string with the line to plot or an array with the linesto plot.
+    out: str
+        The output location for the plot.
+    name: str
+        The name of the object.
+    png: bool, optional
+        Set to True to output plot in png. Default is True.
+    pdf: bool, optional
+        Set to True to output plot in pdf. Default is False
+    verbose: bool, optional
+        Enable prints.
+    """
     hdul = fits.open(filename)
     data = hdul[0].data
-
-    print('Correcting spectrum to rest frame. (This could take a while)')
+    if verbose:
+        print('Correcting spectrum to rest frame. (This could take a while)')
     w, f = correct_to_rest(data)
     prod = np.stack((w, f, data[4, :, :], data[8, :, :]))
-    print('Merging echelle spectra.')
+    if verbose:
+        print('Merging echelle spectra.')
     waves, fluxes, _, _ = merge_echelle(prod, hdul[0].header)
     line_plot(waves, fluxes, lines, out, name, png=png, pdf=pdf)
 
 
-def line_plot(waves, fluxes, lines, out, name, png=True, pdf=False):
+def line_plot(waves, fluxes, lines, out, name, png=True, pdf=False,
+              verbose=False):
     """Create a plot showing the selected lines.
 
-        Parameters
-        ----------
-        waves: array_like
-            The wavelength array.
-        fluxes: array_like
-            The flux array.
-        lines: str, array_like
-            A string with the line to plot or an array with the lines to plot.
-        out: str
-            The output location for the plot.
-        name: str
-            The name of the object.
-        png: bool, optional
-            Set to True to output plot in png. Default is True.
-        pdf: bool, optional
-            Set to True to output plot in pdf. Default is False
-        """
+    Parameters
+    ----------
+    waves: array_like
+        The wavelength array.
+    fluxes: array_like
+        The flux array.
+    lines: str, array_like
+        A string with the line to plot or an array with the lines to plot.
+    out: str
+        The output location for the plot.
+    name: str
+        The name of the object.
+    png: bool, optional
+        Set to True to output plot in png. Default is True.
+    pdf: bool, optional
+        Set to True to output plot in pdf. Default is False
+    verbose: bool, optional
+        Enable prints.
+    """
     if isinstance(lines, str):  # check if lines is a str or a list/array
         lines = [lines]
 
     png = png if __ensure_png_pdf(png, pdf) else True
     for line in lines:
-        print(f'Plotting line {line}')
+        if verbose:
+            print(f'Plotting line {line}')
         f, ax = plt.subplots(figsize=(20, 10))
         ax.plot(waves, fluxes, c='k', lw=.85)
 
@@ -131,10 +139,13 @@ def line_plot(waves, fluxes, lines, out, name, png=True, pdf=False):
             ax = HeI_plot(ax)
         elif line == 'NaID1D2':
             ax = NaID1D2_plot(ax)
+        lims = ax.get_xlim()
+        i = np.where((waves > lims[0]) & (waves < lims[1]))[0]
+        ax.set_ylim(fluxes[i].min() * .95, fluxes[i].max() * 1.25)
         if png:
-            plt.savefig(f'{out}/{name}_{line}.png', bbox_inches='tight')
+          plt.savefig(f'{out}/{name}_{line}.png', bbox_inches='tight')
         if pdf:
-            plt.savefig(f'{out}/{name}_{line}.pdf', bbox_inches='tight')
+          plt.savefig(f'{out}/{name}_{line}.pdf', bbox_inches='tight')
 
 
 def CaHK_plot(ax):
@@ -150,7 +161,6 @@ def CaHK_plot(ax):
     ax.axvline(CaH, c='red', ls='dashed')
 
     ax.set_xlim(3880, 4020)
-    ax.set_ylim(0)
 
     ax.set_title(r'Ca$_{\rm II}$ H+K',
                  fontname=fontname,
@@ -176,7 +186,6 @@ def Ha_plot(ax):
     ax.axvline(Ha, color='red', ls='dashed')
 
     ax.set_xlim(6544.495, 6585.684)
-    ax.set_ylim(0)
 
     ax.set_title(r'H$_{\alpha}$',
                  fontname=fontname,
@@ -208,7 +217,6 @@ def HeI_plot(ax):
     ax.axvline(HeI, color='red', ls='dashed')
 
     ax.set_xlim(5873.75, 5879.75)
-    ax.set_ylim(0)
 
     ax.set_title(r'He$_{\rm I}$',
                  fontname=fontname,
@@ -236,7 +244,6 @@ def NaID1D2_plot(ax):
     ax.axvline(NaID2, color='red', ls='dashed')
 
     ax.set_xlim(5790, 6110)
-    ax.set_ylim(0)
 
     ax.set_title(r'Na$_{\rm I}$ D1 D2',
                  fontname=fontname,
