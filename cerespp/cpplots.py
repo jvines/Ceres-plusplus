@@ -1,12 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from astropy.io import fits
 from scipy.signal import triang
 from termcolor import colored
-from astropy.io import fits
 
 from .constants import *
+from .spectra_utils import correct_to_rest
+from .spectra_utils import merge_echelle
 from .utils import gauss_fit
-from .spectra_utils import correct_to_rest, merge_echelle
 
 
 def __ensure_png_pdf(png, pdf):
