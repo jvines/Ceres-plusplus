@@ -8,8 +8,6 @@ import numpy as np
 from astropy.io import fits
 from tqdm import tqdm
 
-from .spectra_utils import correct_to_rest, merge_echelle
-from .utils import get_line_flux
 from .constants import *
 
 
@@ -24,6 +22,10 @@ def get_activities(files, out, mask='G2', save=False):
         The output directory for the results.
     save: bool, optional
         Set to True to save the merged echelle spectra. Default is False.
+    mask: str, optional
+        The selected mask for calculating the RV. Options are G2, K0, K5 and M2
+    save: bool, optional
+        Save the individual merged spectra?
 
     Returns
     -------
