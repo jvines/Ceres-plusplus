@@ -111,17 +111,19 @@ def velocity_correction(instrument, spec_list, rvs=[]):
     pass
 
 
-def median_combine(spec_list, nord=None, plx=None):
+def median_combine(spec_list, nord=None, plx=None, out=None):
     """Median combine rest frame spectra.
 
     Parameters
     ----------
-    spec_list : array_like
+    spec_list: array_like
         Array with spectra files.
-    nord : int, optional
+    nord: int, optional
         Number of echelle orders.
-    plx : float, optional
+    plx: float, optional
         Target's parallax.
+    out: str, optional
+        The output folder for the combined spectrum.
 
     """
     wavelengths = []
@@ -148,7 +150,10 @@ def median_combine(spec_list, nord=None, plx=None):
     final_waves = np.vstack(wavelengths)
     final_fluxes = np.vstack(fluxes)
     final_out = np.stack([final_waves, final_fluxes])
-    out = targ_name + '_stacked.fits'
+    if out is not None:
+        out = targ_name + '_stacked.fits'
+    else:
+        out += f'/{targ_name}_stacked.fits'
     hdr = fits.Header()
     hdr['NAME'] = targ_name
     hdr['PLX'] = plx
@@ -273,17 +278,16 @@ def merge_echelle(data, header, out='', save=False):
 
         hdu = fits.PrimaryHDU(prod_out, header=hdr)
 
-        if not out:
-            out = targ_name
-        else:
-            date = header['HIERARCH SHUTTER START DATE'].split('-')
-            ut = header['HIERARCH SHUTTER START UT'].split(':')
-            out += header['HIERARCH TARGET NAME'] + '_'
-            for d in date:
-                out += d
-            out += '_UT'
-            for u in ut:
-                out += u
+
+        out += f'/{targ_name}'
+        date = header['HIERARCH SHUTTER START DATE'].split('-')
+        ut = header['HIERARCH SHUTTER START UT'].split(':')
+        out += header['HIERARCH TARGET NAME'] + '_'
+        for d in date:
+            out += d
+        out += '_UT'
+        for u in ut:
+            out += u
         out += '_1d_rest_frame.fits'
         try:
             hdu.writeto(out)
