@@ -11,7 +11,7 @@ with open('README.md', 'r') as fh:
     
 setup(
     name='cerespp',
-    version='0.0.2',
+    version='0.0.3',
     author='Jose Vines',
     author_email='jose.vines@ug.uchile.cl',
     description='An extension to ceres.',
