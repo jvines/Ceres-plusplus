@@ -13,7 +13,8 @@ from astropy.io import fits
 from scipy.interpolate import interp1d
 from tqdm import tqdm
 
-from .crosscorr import ccf, ccf_fit
+from .crosscorr import ccf
+from .crosscorr import ccf_fit
 
 
 def feros_velocity_correction(data, rv, create_fits=False, header=None, out=''):
