@@ -9,6 +9,10 @@ from astropy.io import fits
 from tqdm import tqdm
 
 from .constants import *
+from .spectra_utils import correct_to_rest
+from .spectra_utils import merge_echelle
+from .utils import create_dir
+from .utils import get_line_flux
 
 
 def get_activities(files, out, mask='G2', save=False):
@@ -36,6 +40,7 @@ def get_activities(files, out, mask='G2', save=False):
 
     """
     nofwhm = False
+    create_dir(out)
 
     # Activity holders
     bjd = []
@@ -53,6 +58,9 @@ def get_activities(files, out, mask='G2', save=False):
     fwhm_err = []
     contrast = []
 
+    hdul = fits.open(files[0])
+    targ_name = hdul[0].header['HIERARCH TARGET NAME']
+
     for fname in tqdm(files):
         hdul = fits.open(fname)
         data = hdul[0].data
@@ -68,6 +76,7 @@ def get_activities(files, out, mask='G2', save=False):
         except KeyError:  # if the FWHM is not in the header for some reason..
             nofwhm = True
         contrast.append(hdul[0].header['XC_MIN'])
+        hdul.close()
 
         w, f = correct_to_rest(data, mask=mask)
 
@@ -192,5 +201,5 @@ def get_activities(files, out, mask='G2', save=False):
                 ]
             ).T
         np.savetxt(
-            f'{out}.dat', data, header=header)
+            f'{out}/{targ_name}_activities.dat', data, header=header)
     return data, header
