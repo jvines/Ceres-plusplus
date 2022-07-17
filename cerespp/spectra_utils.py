@@ -169,16 +169,17 @@ def median_combine(spec_list, nord=None, plx=None, out=None):
     pass
 
 
-def median_combine_1d(spec_list, plx=None):
+def median_combine_1d(spec_list, plx=None, out=None):
     """Median combine 1d rest frame spectra.
 
     Parameters
     ----------
-    spec_list : array_like
+    spec_list: array_like
         Array with spectra files.
-    plx : float, optional
+    plx: float, optional
         Target's parallax.
-
+    out: str, optional
+        Output folder.
     """
     combiner = []
     header = fits.open(spec_list[0])[0].header
@@ -198,7 +199,10 @@ def median_combine_1d(spec_list, plx=None):
     combiner = np.array(combiner)
     combined = np.median(combiner, axis=0)
     final_out = np.stack([new_w, combined])
-    out = targ_name + '_1d_stacked.fits'
+    if out is None:
+        out = f'{targ_name}_1d_stacked.fits'
+    else:
+        out = f'{out}/{targ_name}_1d_stacked.fits'
     hdr = fits.Header()
     hdr['HIERARCH TARGET NAME'] = targ_name
     hdr['HIERARCH PLX'] = plx
