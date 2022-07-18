@@ -17,14 +17,15 @@ from .crosscorr import ccf
 from .crosscorr import ccf_fit
 
 
-def feros_velocity_correction(data, rv, create_fits=False, header=None, out=''):
-    """Radial velocity correction for a FEROS spectrum.
+def velocity_correction(data, rv, create_fits=False, header=None, out=''):
+    """Radial velocity correction for a CERES reduced spectrum.
 
     Parameters
     ----------
     data : array_like
-        An array shaped (2, ord, N) where the first entry are the wavelengths,
-        the second is the deblazed continuum normalized flux.
+        An array shaped (4, ord, N) where the first entry are the wavelengths,
+        the second is the deblazed continuum normalized flux, the third is the
+        error associated to the flux and the fourth is the snr.
         Ord is the number of echelle orders and N the number of data
 
     rv : float
@@ -45,12 +46,6 @@ def feros_velocity_correction(data, rv, create_fits=False, header=None, out=''):
         An array with the corresponding fluxes.
 
     """
-    # Read fits file
-    #     hdul = fits.open(spec)
-    # Extract RV
-    #     if not rv:
-    #         rv = hdul[0].header['RV'] * u.km / u.s
-    #         rv = rv.to(u.m / u. s)
     # Create gamma
     beta = rv / const.c
     gamma = 1 + beta.value
@@ -86,29 +81,6 @@ def feros_velocity_correction(data, rv, create_fits=False, header=None, out=''):
             os.remove(out)
             hdu.writeto(out)
     return wave_rest, flux
-
-
-def velocity_correction(instrument, spec_list, rvs=[]):
-    """Radial velocity correction for a list of spectra.
-
-    Parameters
-    ----------
-    instrument : str
-        The instrument with which the spectra was obtained.
-    spec_list : array_like
-        An array with filenames pointing to the fits files.
-
-    """
-    if instrument.lower() == 'feros':
-        corrector = feros_velocity_correction
-    if not rvs:
-        for spec in tqdm(spec_list, desc='Spectra'):
-            corrector(spec, True)
-    else:
-        for spec, rv in tqdm(zip(spec_list, rvs),
-                             desc='Spectra', total=len(spec_list)):
-            corrector(spec, True, rv)
-    pass
 
 
 def median_combine(spec_list, nord=None, plx=None, out=None):
@@ -311,8 +283,8 @@ def correct_to_rest(data, mask='G2'):
     med_ccf = np.median(ccf_arr, axis=0)
     _, rv, _, _ = ccf_fit(rv_arr, med_ccf)
 
-    w, f = feros_velocity_correction(
-        data[[0, 5, 4, 8], :, :],
+    w, f = velocity_correction(
+        data[[0, 5, 6, 8], :, :],
         rv * 1000,
         False,
     )
