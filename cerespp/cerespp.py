@@ -60,8 +60,11 @@ def get_activities(files, out, mask='G2', save=False):
 
     hdul = fits.open(files[0])
     targ_name = hdul[0].header['HIERARCH TARGET NAME']
+    inst = hdul[0].header['INST'].lower()
 
     for fname in tqdm(files):
+        S, sS, Halpha, sHalpha = -999, -999, -999, -999
+        HelI, sHelI, NaID1D2, sNaID1D2 = -999, -999, -999, -999
         hdul = fits.open(fname)
         data = hdul[0].data
 
@@ -80,32 +83,33 @@ def get_activities(files, out, mask='G2', save=False):
 
         w, f = correct_to_rest(data, mask=mask)
 
-        prod = np.stack((w, f, data[4, :, :], data[8, :, :]))
+        prod = np.stack((w, f, data[6, :, :], data[8, :, :]))
 
         waves, fluxes, errors, sn = merge_echelle(prod, hdul[0].header,
                                                   out=out, save=save)
 
-        # Get S index
-        # First is CaV
-        NV, sNV = get_line_flux(waves, fluxes, CaV, 20, filt='square',
-                                error=errors)
+        # Get S index. FIDEOS doesn't reach Ca HK
+        if inst not in s_exceptions:
+            # First is CaV
+            NV, sNV = get_line_flux(waves, fluxes, CaV, 20, filt='square',
+                                    error=errors)
 
-        # Now CaR
-        NR, sNR = get_line_flux(waves, fluxes, CaR, 20,
-                                filt='square', error=errors)
+            # Now CaR
+            NR, sNR = get_line_flux(waves, fluxes, CaR, 20,
+                                    filt='square', error=errors)
 
-        # Now CaK
-        NK, sNK = get_line_flux(waves, fluxes, CaK, 1.09,
-                                filt='triangle', error=errors)
+            # Now CaK
+            NK, sNK = get_line_flux(waves, fluxes, CaK, 1.09,
+                                    filt='triangle', error=errors)
 
-        # Now CaH
-        NH, sNH = get_line_flux(waves, fluxes, CaH, 1.09,
-                                filt='triangle', error=errors)
+            # Now CaH
+            NH, sNH = get_line_flux(waves, fluxes, CaH, 1.09,
+                                    filt='triangle', error=errors)
 
-        S = (NH + NK) / (NR + NV)
-        sSnum = np.sqrt(sNH ** 2 + sNK ** 2)
-        sSden = np.sqrt(sNV ** 2 + sNR ** 2)
-        sS = np.sqrt((sSnum / (NH + NK)) ** 2 + (sSden / (NR + NV)) ** 2)
+            S = (NH + NK) / (NR + NV)
+            sSnum = np.sqrt(sNH ** 2 + sNK ** 2)
+            sSden = np.sqrt(sNV ** 2 + sNR ** 2)
+            sS = np.sqrt((sSnum / (NH + NK)) ** 2 + (sSden / (NR + NV)) ** 2)
 
         s_indices.append(S)
         s_err.append(sS)
