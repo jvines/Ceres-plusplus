@@ -11,21 +11,26 @@ with open('README.md', 'r') as fh:
     
 setup(
     name='cerespp',
-    version='0.0.3',
+    version='0.0.5',
     author='Jose Vines',
     author_email='jose.vines@ug.uchile.cl',
+    maintainer="Jose Vines",
+    maintainer_email="jose.vines@ug.uchile.cl",
     description='An extension to ceres.',
     long_description=long_description,
     long_description_content_type='text/markdown',
+    license='MIT',
     url='https://github.com/jvines/Ceres-plusplus',
     packages=find_packages(),
     package_data={'cerespp': ['masks']},
     include_package_data=True,
     classifiers=[
+        'Development Status :: 4 - Beta',
         "Programming Language :: Python :: 3",
+        'Intended Audience :: Science/Research',
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
-        "Topic :: Scientific/Engineering :: Astronomy"
+        "Topic :: Scientific/Engineering :: Astronomy",
     ],
     python_requires='>=3.6',
     requires=[
