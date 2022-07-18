@@ -3,8 +3,13 @@ This module contains constants to be used throughout the code.
 I'm storing them here to remove clutter from the main code.
 """
 
+import inspect
+import os
 from pkg_resources import resource_filename
 
+
+__ROOT__ = '/'.join(os.path.abspath(inspect.getfile(inspect.currentframe())
+                                    ).split('/')[:-1])
 
 masksdir = resource_filename('cerespp', 'masks')
 
@@ -22,3 +27,6 @@ NaID2 = 5889.95
 fontsize = 22
 fontname = 'serif'
 tick_labelsize = 18
+
+# Exceptions
+s_exceptions = ['fideos']
