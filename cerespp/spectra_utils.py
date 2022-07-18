@@ -282,17 +282,12 @@ def merge_echelle(data, header, out='', save=False):
 
         hdu = fits.PrimaryHDU(prod_out, header=hdr)
 
-
-        out += f'/{targ_name}'
         date = header['HIERARCH SHUTTER START DATE'].split('-')
+        date = ''.join(date)
         ut = header['HIERARCH SHUTTER START UT'].split(':')
-        out += header['HIERARCH TARGET NAME'] + '_'
-        for d in date:
-            out += d
-        out += '_UT'
-        for u in ut:
-            out += u
-        out += '_1d_rest_frame.fits'
+        ut = ''.join(ut)
+
+        out = f"{out}/{targ_name}_{date}_UT{ut}_1d_rest_frame.fits"
         try:
             hdu.writeto(out)
         except OSError:
