@@ -305,10 +305,12 @@ def merge_echelle(data, header, out='', save=False):
 def correct_to_rest(data, mask='G2'):
     """Correct the spectra to rest frame and return wavelength and flux."""
     ccf_arr = []
-    for o in range(data.shape[1] - 1, 0, -1):
+    for o in range(data.shape[1] - 1, -1, -1):
         wave = data[0, o, :]
         flux = data[5, o, :]
         rv_arr, cc = ccf(wave, flux, mask=mask, drv=0.05)
+        if np.all(np.isnan(cc)):
+            continue
         ccf_arr.append(cc)
     ccf_arr = np.array(ccf_arr)
     med_ccf = np.median(ccf_arr, axis=0)
