@@ -83,7 +83,7 @@ def get_activities(files, out, mask='G2', save=False):
 
         w, f = correct_to_rest(data, mask=mask)
 
-        prod = np.stack((w, f, data[6, :, :], data[8, :, :]))
+        prod = np.stack((w, f, data[2, :, :], data[8, :, :]))
 
         waves, fluxes, errors, sn = merge_echelle(prod, hdul[0].header,
                                                   out=out, save=save)
