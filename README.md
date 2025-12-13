@@ -8,6 +8,83 @@ calculates others (S index, Ha, HeI, NaID1D2)
 It's been tested to work on FEROS and FIDEOS spectra. Feel free to use it with
 other instruments and let me know if it works :)
 
+## New in Version 1.3.0
+
+Version 1.3.0 introduces significant improvements for integration with microservice architectures while maintaining 100% backward compatibility.
+
+### Single-File Processing API
+
+Process individual FITS files with granular logging and structured results:
+
+```python
+import cerespp
+
+result = cerespp.process_single_file(
+    'spectrum.fits',
+    output_dir='results/',
+    mask='G2',
+    save=True  # Save 1D merged spectrum
+)
+
+print(f"S-index: {result.s_index:.3f} ± {result.s_index_error:.3f}")
+print(f"1D spectrum saved to: {result.spectrum_1d_path}")
+```
+
+### Progress Callbacks
+
+Monitor processing steps in real-time:
+
+```python
+def my_callback(step, **kwargs):
+    print(f"Current step: {step}")
+
+result = cerespp.process_single_file(
+    'spectrum.fits',
+    output_dir='results/',
+    progress_callback=my_callback
+)
+```
+
+### Structured Results
+
+Results are returned as structured dataclasses with convenient methods:
+
+```python
+# Access individual fields
+print(f"BJD: {result.bjd}")
+print(f"RV: {result.rv} km/s")
+
+# Convert to JSON-serializable dictionary
+data = result.to_dict()
+```
+
+### Enhanced CLI
+
+New command-line interface supports both single-file and bulk processing:
+
+```bash
+# New: Process single file with verbose logging
+cerespp --file spectrum.fits --output results/ --save-1d --verbose
+
+# Legacy: Bulk processing (still fully supported)
+cerespp --files *.fits --output results.dat --mask G2
+```
+
+### Backward Compatibility
+
+All existing code continues to work exactly as before:
+
+```python
+# This still works identically to previous versions
+activities, header = cerespp.get_activities(
+    files=['s1.fits', 's2.fits'],
+    out='results.dat',
+    mask='G2'
+)
+```
+
+See the [API documentation](docs/api.md) for complete details and the [CHANGELOG](CHANGELOG.md) for all changes.
+
 ## Installation
 
 You can try running `pip install cerespp`
