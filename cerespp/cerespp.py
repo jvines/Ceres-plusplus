@@ -7,16 +7,26 @@ Author: Jose Vines
 import numpy as np
 from astropy.io import fits
 from tqdm import tqdm
+from typing import Optional, Callable
 
 from .constants import *
 from .spectra_utils import correct_to_rest
 from .spectra_utils import merge_echelle
 from .utils import create_dir
 from .utils import get_line_flux
+from .processor import SpectrumProcessor
+from .models import ProcessingResult
+from .logger import StructuredLogger
 
 
-def get_activities(files, out, mask='G2', save=False):
-    """Main function.
+def get_activities(files, out, mask='G2', save=False,
+                   logger: Optional[StructuredLogger] = None,
+                   progress_callback: Optional[Callable] = None):
+    """Main function (backward compatible).
+
+    This function now delegates to SpectrumProcessor for each file,
+    providing granular logging and progress tracking while maintaining
+    the same output format for backward compatibility.
 
     Parameters
     ----------
@@ -24,12 +34,14 @@ def get_activities(files, out, mask='G2', save=False):
         An array or list with the spectra filenames.
     out: str
         The output directory for the results.
-    save: bool, optional
-        Set to True to save the merged echelle spectra. Default is False.
     mask: str, optional
         The selected mask for calculating the RV. Options are G2, K0, K5 and M2
     save: bool, optional
-        Save the individual merged spectra?
+        Save the individual merged spectra? Default is False.
+    logger : Optional[StructuredLogger]
+        Logger instance for structured logging
+    progress_callback : Optional[Callable]
+        Callback function for progress updates
 
     Returns
     -------
@@ -39,10 +51,92 @@ def get_activities(files, out, mask='G2', save=False):
         An array with the activity indices identifiers.
 
     """
-    nofwhm = False
     create_dir(out)
+    processor = SpectrumProcessor(mask=mask, logger=logger,
+                                 progress_callback=progress_callback)
 
-    # Activity holders
+    results = []
+    for fname in tqdm(files, desc="Processing spectra"):
+        try:
+            result = processor.process_file(fname, out, save_1d=save)
+            results.append(result)
+        except Exception as e:
+            if logger:
+                logger.error(f"Failed to process {fname}: {e}")
+            # Continue with next file instead of crashing
+            results.append(ProcessingResult(filename=fname, errors=str(e)))
+
+    # Convert to legacy output format for backward compatibility
+    return _convert_to_legacy_format(results, out)
+
+
+def process_single_file(filename: str, out: str, mask: str = 'G2',
+                       save: bool = True,
+                       logger: Optional[StructuredLogger] = None,
+                       progress_callback: Optional[Callable] = None) -> ProcessingResult:
+    """Process a single file (new microservice-friendly interface).
+
+    This function provides a clean API for processing individual files,
+    returning structured results instead of bulk arrays.
+
+    Parameters
+    ----------
+    filename : str
+        Path to FITS file to process
+    out : str
+        Output directory for results
+    mask : str, optional
+        Mask for RV calculation ('G2', 'K0', 'K5', 'M2'). Default is 'G2'.
+    save : bool, optional
+        Save merged 1D spectrum to FITS file. Default is True.
+    logger : Optional[StructuredLogger]
+        Logger instance for structured logging
+    progress_callback : Optional[Callable]
+        Callback function called after each processing step
+
+    Returns
+    -------
+    ProcessingResult
+        Structured result with all activity indicators
+
+    Examples
+    --------
+    >>> result = process_single_file('spectrum.fits', 'output/', mask='G2')
+    >>> print(f"S-index: {result.s_index:.3f}")
+    S-index: 0.234
+
+    >>> def callback(step, **kwargs):
+    ...     print(f"Processing: {step}")
+    >>> result = process_single_file('spectrum.fits', 'output/',
+    ...                              progress_callback=callback)
+    Processing: Loading FITS file
+    Processing: Converting to rest frame
+    ...
+    """
+    create_dir(out)
+    processor = SpectrumProcessor(mask=mask, logger=logger,
+                                 progress_callback=progress_callback)
+    return processor.process_file(filename, out, save_1d=save)
+
+
+def _convert_to_legacy_format(results, out):
+    """Convert list of ProcessingResult to legacy output format.
+
+    Parameters
+    ----------
+    results : list of ProcessingResult
+        Structured results from processing
+    out : str
+        Output directory
+
+    Returns
+    -------
+    data : numpy.ndarray
+        Array with activity indices (legacy format)
+    header : str
+        Header string with column names (legacy format)
+    """
+    # Extract arrays from results
     bjd = []
     s_indices = []
     s_err = []
@@ -58,152 +152,71 @@ def get_activities(files, out, mask='G2', save=False):
     fwhm_err = []
     contrast = []
 
-    hdul = fits.open(files[0])
-    targ_name = hdul[0].header['HIERARCH TARGET NAME']
-    inst = hdul[0].header['INST'].lower()
+    has_fwhm = False
+    targ_name = "unknown"
 
-    for fname in tqdm(files):
-        S, sS, Halpha, sHalpha = -999, -999, -999, -999
-        HelI, sHelI, NaID1D2, sNaID1D2 = -999, -999, -999, -999
-        hdul = fits.open(fname)
-        data = hdul[0].data
+    for result in results:
+        if result.errors:
+            # Skip failed files
+            continue
 
-        bjd.append(hdul[0].header['BJD_OUT'])  # Extract BJD
-        bis.append(hdul[0].header['BS'])  # Extract BIS
-        bis_err.append(hdul[0].header['BS_E'])  # Extract BIS error
-        try:
-            fwhm.append(hdul[0].header['FWHM'])  # Try and get the FWHM
-            # This calculates the error on the FWHM, inspired by the RV error
-            # Calculation from the ceres paper.
-            fwhm_err.append(hdul[0].header['DISP'] / hdul[0].header['SNR'])
-        except KeyError:  # if the FWHM is not in the header for some reason..
-            nofwhm = True
-        contrast.append(hdul[0].header['XC_MIN'])
-        hdul.close()
+        bjd.append(result.bjd)
+        s_indices.append(result.s_index)
+        s_err.append(result.s_index_error)
+        ha.append(result.halpha)
+        ha_err.append(result.halpha_error)
+        hei.append(result.hei)
+        hei_err.append(result.hei_error)
+        nai.append(result.nai_d1d2)
+        nai_err.append(result.nai_d1d2_error)
+        bis.append(result.bis)
+        bis_err.append(result.bis_error)
+        contrast.append(result.contrast)
 
-        w, f = correct_to_rest(data, mask=mask)
+        if result.fwhm is not None:
+            has_fwhm = True
+            fwhm.append(result.fwhm)
+            fwhm_err.append(result.fwhm_error)
 
-        prod = np.stack((w, f, data[2, :, :], data[8, :, :]))
+        # Get target name from first file
+        if targ_name == "unknown" and result.filename:
+            try:
+                hdul = fits.open(result.filename)
+                targ_name = hdul[0].header.get('HIERARCH TARGET NAME', 'unknown')
+                hdul.close()
+            except:
+                pass
 
-        waves, fluxes, errors, sn = merge_echelle(prod, hdul[0].header,
-                                                  out=out, save=save)
+    # Build output arrays
+    if has_fwhm:
+        header = 'bjd S e_S Halpha e_Halpha HeI'
+        header += ' e_HeI NaID1D2 e_NaID1D2 BIS e_BIS FWHM e_FWHM CONTRAST'
 
-        # Get S index. FIDEOS doesn't reach Ca HK
-        if inst not in s_exceptions:
-            # First is CaV
-            NV, sNV = get_line_flux(waves, fluxes, CaV, 20, filt='square',
-                                    error=errors)
+        data = np.vstack([
+            bjd,
+            s_indices, s_err,
+            ha, ha_err,
+            hei, hei_err,
+            nai, nai_err,
+            bis, bis_err,
+            fwhm, fwhm_err,
+            contrast
+        ]).T
+    else:
+        header = 'bjd S e_S Halpha e_Halpha HeI'
+        header += ' e_HeI NaID1D2 e_NaID1D2 BIS e_BIS CONTRAST'
 
-            # Now CaR
-            NR, sNR = get_line_flux(waves, fluxes, CaR, 20,
-                                    filt='square', error=errors)
+        data = np.vstack([
+            bjd,
+            s_indices, s_err,
+            ha, ha_err,
+            hei, hei_err,
+            nai, nai_err,
+            bis, bis_err,
+            contrast
+        ]).T
 
-            # Now CaK
-            NK, sNK = get_line_flux(waves, fluxes, CaK, 1.09,
-                                    filt='triangle', error=errors)
+    # Save to file (maintaining backward compatibility)
+    np.savetxt(f'{out}/{targ_name}_activities.dat', data, header=header)
 
-            # Now CaH
-            NH, sNH = get_line_flux(waves, fluxes, CaH, 1.09,
-                                    filt='triangle', error=errors)
-
-            S = (NH + NK) / (NR + NV)
-            sSnum = np.sqrt(sNH ** 2 + sNK ** 2)
-            sSden = np.sqrt(sNV ** 2 + sNR ** 2)
-            sS = np.sqrt((sSnum / (NH + NK)) ** 2 + (sSden / (NR + NV)) ** 2)
-
-        s_indices.append(S)
-        s_err.append(sS)
-
-        # Now Halpha
-        FHa, sFHa = get_line_flux(waves, fluxes, Ha, 0.678,
-                                  filt='square', error=errors)
-
-        # Now F1
-        F1, sF1 = get_line_flux(waves, fluxes, 6550.87,
-                                10.75, filt='square', error=errors)
-
-        # Now F2
-        F2, sF2 = get_line_flux(waves, fluxes, 6580.309,
-                                8.75, filt='square', error=errors)
-
-        Halpha = FHa / (0.5 * (F1 + F2))
-        sden = np.sqrt(sF1 ** 2 + sF2 ** 2)
-        sHalpha = np.sqrt((sFHa / FHa) ** 2 + (sden / (F1 + F2)) ** 2)
-
-        ha.append(Halpha)
-        ha_err.append(sHalpha)
-
-        # Now HeI
-        FHeI, sFHeI = get_line_flux(waves, fluxes, HeI, 0.2,
-                                    filt='square', error=errors)
-
-        # Now F1
-        F1, sF1 = get_line_flux(waves, fluxes, 5874.5,
-                                0.5, filt='square', error=errors)
-
-        # Now F2
-        F2, sF2 = get_line_flux(waves, fluxes, 5879,
-                                0.5, filt='square', error=errors)
-
-        HelI = FHeI / (0.5 * (F1 + F2))
-        sden = np.sqrt(sF1 ** 2 + sF2 ** 2)
-        sHelI = np.sqrt((sFHeI / FHeI) ** 2 + (sden / (F1 + F2)) ** 2)
-
-        hei.append(HelI)
-        hei_err.append(sHelI)
-
-        # Now NaI D1 D2
-        D1, sD1 = get_line_flux(waves, fluxes, NaID1, 1,
-                                filt='square', error=errors)
-
-        D2, sD2 = get_line_flux(waves, fluxes, NaID2, 1,
-                                filt='square', error=errors)
-
-        L, sL = get_line_flux(waves, fluxes, 5805, 10, filt='square',
-                              error=errors)
-
-        R, sR = get_line_flux(waves, fluxes, 6090, 20, filt='square',
-                              error=errors)
-
-        NaID1D2 = (D1 + D2) / (R + L)
-        sNanum = np.sqrt(sD1 ** 2 + sD2 ** 2)
-        sNaden = np.sqrt(sL ** 2 + sR ** 2)
-        sNaID1D2 = np.sqrt((sNanum / (D1 + D2)) ** 2 + (sNaden / (R + L)) ** 2)
-
-        nai.append(NaID1D2)
-        nai_err.append(sNaID1D2)
-
-        if not nofwhm:
-            header = 'bjd S e_S Halpha e_Halpha HeI'
-            header += ' e_HeI NaID1D2 e_NaID1D2 BIS e_BIS FWHM e_FWHM CONTRAST'
-
-            data = np.vstack(
-                [
-                    bjd,
-                    s_indices, s_err,
-                    ha, ha_err,
-                    hei, hei_err,
-                    nai, nai_err,
-                    bis, bis_err,
-                    fwhm, fwhm_err,
-                    contrast
-                ]
-            ).T
-        else:
-            header = 'bjd S e_S Halpha e_Halpha HeI'
-            header += ' e_HeI NaID1D2 e_NaID1D2 BIS e_BIS CONTRAST'
-
-            data = np.vstack(
-                [
-                    bjd,
-                    s_indices, s_err,
-                    ha, ha_err,
-                    hei, hei_err,
-                    nai, nai_err,
-                    bis, bis_err,
-                    contrast
-                ]
-            ).T
-        np.savetxt(
-            f'{out}/{targ_name}_activities.dat', data, header=header)
     return data, header

@@ -1,9 +1,15 @@
 import os
 
 import numpy as np
-from scipy.integrate import trapz
+try:
+    from scipy.integrate import trapezoid as trapz
+except ImportError:
+    from scipy.integrate import trapz
 from scipy.interpolate import interp1d
-from scipy.signal import triang
+try:
+    from scipy.signal.windows import triang
+except ImportError:
+    from scipy.signal import triang
 from scipy.stats import norm
 
 

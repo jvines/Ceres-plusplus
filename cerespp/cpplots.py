@@ -1,7 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import fits
-from scipy.signal import triang
+try:
+    from scipy.signal.windows import triang
+except ImportError:
+    from scipy.signal import triang
 from termcolor import colored
 
 from .constants import *
