@@ -6,12 +6,12 @@ Author: Jose Vines
 """
 import time
 import os
+import logging
 import numpy as np
 from astropy.io import fits
 from typing import Optional, Callable
 
 from .models import ProcessingResult
-from .logger import StructuredLogger, default_logger
 from .constants import *
 from .spectra_utils import correct_to_rest, merge_echelle
 from .utils import get_line_flux
@@ -31,7 +31,7 @@ class SpectrumProcessor:
     ----------
     mask : str
         Mask for RV calculation ('G2', 'K0', 'K5', or 'M2')
-    logger : Optional[StructuredLogger]
+    logger : Optional[logging.Logger]
         Logger instance. If None, uses default logger.
     progress_callback : Optional[Callable]
         Function called after each processing step.
@@ -41,7 +41,7 @@ class SpectrumProcessor:
     ----------
     mask : str
         Selected mask
-    logger : StructuredLogger
+    logger : logging.Logger
         Logger instance
     progress_callback : Optional[Callable]
         Progress callback function
@@ -62,7 +62,7 @@ class SpectrumProcessor:
     """
 
     def __init__(self, mask: str = 'G2',
-                 logger: Optional[StructuredLogger] = None,
+                 logger: Optional[logging.Logger] = None,
                  progress_callback: Optional[Callable] = None):
         """Initialize spectrum processor.
 
@@ -70,13 +70,13 @@ class SpectrumProcessor:
         ----------
         mask : str
             Mask for RV calculation
-        logger : Optional[StructuredLogger]
+        logger : Optional[logging.Logger]
             Logger instance
         progress_callback : Optional[Callable]
             Progress callback function
         """
         self.mask = mask
-        self.logger = logger or default_logger
+        self.logger = logger or logging.getLogger('cerespp')
         self.progress_callback = progress_callback
         self.timing = {}
 
@@ -200,6 +200,53 @@ class SpectrumProcessor:
                 errors=str(e)
             )
 
+    def _extract_bisector_with_fallback(self, filename: str, header):
+        """Extract bisector with fallback: BS from header → BS2 from results.txt → -999
+
+        Parameters
+        ----------
+        filename : str
+            Path to FITS file
+        header : astropy.io.fits.Header
+            FITS header object
+
+        Returns
+        -------
+        bis : float
+            Bisector span value
+        bis_error : float
+            Bisector span error
+        """
+        # Step 1: Try BS from FITS header first
+        bis = header.get('BS', -999.0)
+        bis_error = header.get('BS_E', -999.0)
+
+        if bis != -999.0:
+            return bis, bis_error
+
+        # Step 2: BS missing, try BS2 from results.txt
+        try:
+            from pathlib import Path
+            results_file = Path(filename).parent.parent / 'proc' / 'results.txt'
+
+            if results_file.exists():
+                with open(results_file, 'r') as f:
+                    # Parse each line looking for matching filename
+                    fits_name = Path(filename).name
+                    for line in f:
+                        if fits_name in line or Path(filename).stem in line:
+                            parts = line.split()
+                            if len(parts) >= 6:
+                                bis2 = float(parts[4])  # Column 5 (0-indexed column 4)
+                                if bis2 != -999.0:
+                                    return bis2, float(parts[5])  # BS2 and error
+        except Exception:
+            # Silent failure - fallback to -999
+            pass
+
+        # Step 3: Both missing, return -999
+        return -999.0, -999.0
+
     def _load_fits(self, filename: str):
         """Load FITS file and extract header data.
 
@@ -221,10 +268,13 @@ class SpectrumProcessor:
         data = hdul[0].data
         header = hdul[0].header
 
+        # Extract bisector with fallback logic
+        bis, bis_error = self._extract_bisector_with_fallback(filename, header)
+
         header_data = {
             'bjd': header.get('BJD_OUT', 0.0),
-            'bis': header.get('BS', 0.0),
-            'bis_error': header.get('BS_E', 0.0),
+            'bis': bis,
+            'bis_error': bis_error,
             'contrast': header.get('XC_MIN', 0.0),
             'instrument': header.get('INST', 'unknown')
         }
@@ -472,6 +522,19 @@ class SpectrumProcessor:
         **kwargs
             Additional metadata
         """
-        self.logger.info(message, **kwargs)
+        # Format message with kwargs for clean logging
+        if kwargs:
+            # Extract filename if present and make it more readable
+            if 'filename' in kwargs:
+                import os
+                kwargs['filename'] = os.path.basename(kwargs['filename'])
+
+            # Create clean message with key=value pairs
+            extras = ', '.join(f"{k}={v}" for k, v in kwargs.items())
+            full_message = f"{message} ({extras})"
+        else:
+            full_message = message
+
+        self.logger.info(full_message)
         if self.progress_callback:
             self.progress_callback(message, **kwargs)
