@@ -33,8 +33,13 @@ setup(
         "Topic :: Scientific/Engineering :: Astronomy",
     ],
     python_requires='>=3.6',
-    requires=[
+    install_requires=[
         "numpy", "scipy", "matplotlib", "astropy", "PyAstronomy", "tqdm",
         "termcolor"
-    ]
+    ],
+    entry_points={
+        'console_scripts': [
+            'cerespp=cerespp.__main__:main',
+        ],
+    },
 )
