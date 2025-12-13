@@ -8,7 +8,7 @@ try:
     from importlib.metadata import version
     __version__ = version('cerespp')
 except Exception:
-    __version__ = '0.0.5'
+    __version__ = '1.3.0'
 
 from .cerespp import get_activities, process_single_file
 from .cpplots import ccf_gauss_plot
