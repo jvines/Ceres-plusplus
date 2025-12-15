@@ -121,17 +121,14 @@ class SpectrumProcessor:
             # Step 3: Merge echelle orders
             self._log_step("Merging echelle orders")
             step_start = time.time()
-            waves, fluxes, errors, sn = self._merge_orders(
+            waves, fluxes, errors, sn, out = self._merge_orders(
                 data, w, f, hdul[0].header, output_dir, save_1d
             )
             self.timing['merge_echelle'] = time.time() - step_start
 
             spectrum_1d_path = None
             if save_1d:
-                # Construct path where merge_echelle saves the file
-                targ_name = hdul[0].header.get('HIERARCH TARGET NAME', 'unknown')
-                bjd = hdul[0].header.get('BJD_OUT', 0.0)
-                spectrum_1d_path = f"{output_dir}/{targ_name}_{bjd}.fits"
+                spectrum_1d_path = out
 
             hdul.close()
 
@@ -338,10 +335,10 @@ class SpectrumProcessor:
             Signal-to-noise ratio
         """
         prod = np.stack((w, f, data[2, :, :], data[8, :, :]))
-        waves, fluxes, errors, sn = merge_echelle(
+        waves, fluxes, errors, sn, out = merge_echelle(
             prod, header, out=output_dir, save=save
         )
-        return waves, fluxes, errors, sn
+        return waves, fluxes, errors, sn, out
 
     def _calculate_s_index(self, waves: np.ndarray, fluxes: np.ndarray,
                            errors: np.ndarray, inst: str):
