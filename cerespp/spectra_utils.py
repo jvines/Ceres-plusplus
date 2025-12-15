@@ -196,6 +196,7 @@ def merge_echelle(data, header, out='', save=False):
     fluxes = np.array([])
     errors = np.array([])
     sn = np.array([])
+    out = None
 
     next_start = 0
 
@@ -266,7 +267,7 @@ def merge_echelle(data, header, out='', save=False):
             os.remove(out)
             hdu.writeto(out)
 
-    return waves, fluxes, errors, sn
+    return waves, fluxes, errors, sn, out
 
 
 def correct_to_rest(data, mask='G2'):
