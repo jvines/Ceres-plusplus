@@ -196,7 +196,7 @@ def merge_echelle(data, header, out='', save=False):
     fluxes = np.array([])
     errors = np.array([])
     sn = np.array([])
-    out = None
+    output_path = None
 
     next_start = 0
 
@@ -260,14 +260,14 @@ def merge_echelle(data, header, out='', save=False):
         ut = header['HIERARCH SHUTTER START UT'].split(':')
         ut = ''.join(ut)
 
-        out = f"{out}/{targ_name}_{date}_UT{ut}_1d_rest_frame.fits"
+        output_path = f"{out}/{targ_name}_{date}_UT{ut}_1d_rest_frame.fits"
         try:
-            hdu.writeto(out)
+            hdu.writeto(output_path)
         except OSError:
-            os.remove(out)
-            hdu.writeto(out)
+            os.remove(output_path)
+            hdu.writeto(output_path)
 
-    return waves, fluxes, errors, sn, out
+    return waves, fluxes, errors, sn, output_path
 
 
 def correct_to_rest(data, mask='G2'):

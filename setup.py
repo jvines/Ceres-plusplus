@@ -11,7 +11,7 @@ with open('README.md', 'r') as fh:
     
 setup(
     name='cerespp',
-    version='1.3.3',
+    version='1.3.4',
     author='Jose Vines',
     author_email='jose.vines@ug.uchile.cl',
     maintainer="Jose Vines",
