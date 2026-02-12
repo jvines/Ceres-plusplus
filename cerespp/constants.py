@@ -5,13 +5,13 @@ I'm storing them here to remove clutter from the main code.
 
 import inspect
 import os
-from pkg_resources import resource_filename
+from pathlib import Path
 
 
 __ROOT__ = '/'.join(os.path.abspath(inspect.getfile(inspect.currentframe())
                                     ).split('/')[:-1])
 
-masksdir = resource_filename('cerespp', 'masks')
+masksdir = str(Path(__file__).parent / 'masks')
 
 # relevant lines
 CaH = 3968.47

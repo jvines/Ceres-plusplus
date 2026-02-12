@@ -11,7 +11,7 @@ with open('README.md', 'r') as fh:
     
 setup(
     name='cerespp',
-    version='1.3.4',
+    version='1.3.5',
     author='Jose Vines',
     author_email='jose.vines@ug.uchile.cl',
     maintainer="Jose Vines",
@@ -28,7 +28,6 @@ setup(
         'Development Status :: 4 - Beta',
         "Programming Language :: Python :: 3",
         'Intended Audience :: Science/Research',
-        "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Topic :: Scientific/Engineering :: Astronomy",
     ],
