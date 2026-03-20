@@ -192,52 +192,52 @@ def median_combine_1d(spec_list, plx=None, out=None):
 
 def merge_echelle(data, header, out='', save=False):
     """Merge echelle orders."""
-    waves = np.array([])
-    fluxes = np.array([])
-    errors = np.array([])
-    sn = np.array([])
+    n_orders = data.shape[1]
     output_path = None
+
+    # Collect slices in lists, concatenate once at end
+    wave_parts = []
+    flux_parts = []
+    err_parts = []
+    sn_parts = []
 
     next_start = 0
 
-    for i in range(data.shape[1] - 1, 0, -1):
+    for i in range(n_orders - 1, 0, -1):
         wave_current = data[0, i, :]
         wave_next = data[0, i - 1, :]
-        flux_current = data[1, i, :]
-        flux_next = data[1, i - 1, :]
-        err_current = data[2, i, :]
-        err_next = data[2, i - 1, :]
         sn_current = data[3, i, :]
         sn_next = data[3, i - 1, :]
 
-        spl_current = interp1d(wave_current, sn_current)
-        spl_next = interp1d(wave_next, sn_next)
-
+        # Find S/N crossover using linear interpolation (no object overhead)
         wav = np.linspace(wave_next[0], wave_current[-1], 1000)
+        sn_cur_interp = np.interp(wav, wave_current, sn_current)
+        sn_nxt_interp = np.interp(wav, wave_next, sn_next)
+        w = wav[np.argmin(np.abs(sn_cur_interp - sn_nxt_interp))]
 
-        w = wav[np.argmin(abs(spl_current(wav) - spl_next(wav)))]
+        # Binary search for nearest index (O(log n) vs O(n))
+        cur_end = np.searchsorted(wave_current, w)
+        cur_end = min(cur_end, len(wave_current) - 1)
 
-        cur_end = np.where(abs(wave_current - w) < 0.1)[0][0]
+        wave_parts.append(data[0, i, next_start:cur_end])
+        flux_parts.append(data[1, i, next_start:cur_end])
+        err_parts.append(data[2, i, next_start:cur_end])
+        sn_parts.append(data[3, i, next_start:cur_end])
 
-        wc = wave_current[next_start:cur_end]
+        next_start = np.searchsorted(wave_next, w)
+        next_start = min(next_start, len(wave_next) - 1)
 
-        fc = flux_current[next_start:cur_end]
+    # Append final order remainder
+    wave_parts.append(data[0, 0, next_start:])
+    flux_parts.append(data[1, 0, next_start:])
+    err_parts.append(data[2, 0, next_start:])
+    sn_parts.append(data[3, 0, next_start:])
 
-        erc = err_current[next_start:cur_end]
-
-        snc = sn_current[next_start:cur_end]
-
-        waves = np.concatenate((waves, wc))
-        fluxes = np.concatenate((fluxes, fc))
-        errors = np.concatenate((errors, erc))
-        sn = np.concatenate((sn, snc))
-
-        next_start = np.where(abs(wave_next - w) < 0.1)[0][0]
-
-    waves = np.concatenate((waves, wave_next[next_start:]))
-    fluxes = np.concatenate((fluxes, flux_next[next_start:]))
-    errors = np.concatenate((errors, err_next[next_start:]))
-    sn = np.concatenate((sn, sn_next[next_start:]))
+    # Single concatenation
+    waves = np.concatenate(wave_parts)
+    fluxes = np.concatenate(flux_parts)
+    errors = np.concatenate(err_parts)
+    sn = np.concatenate(sn_parts)
 
     if save:
         prod_out = np.stack([waves, fluxes, errors, sn])
