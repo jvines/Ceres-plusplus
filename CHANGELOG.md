@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-03-20
+
+### Performance
+- ~3x speedup in `merge_echelle` order merging via vectorized overlap detection and pre-sorted input
+
+### Fixed
+- Replaced `pkg_resources` with `pathlib` for Python 3.12 compatibility
+- Output path incorrectly overwritten in batch processing
+- `spectrum_1d_path` computed incorrectly
+
+## [1.3.1] - 2025-12-13
+
+### Changed
+- Replaced `StructuredLogger` with standard Python `logging` for cleaner, non-JSON log output
+
+### Added
+- Bisector fallback logic — tries BS from FITS header, falls back to BS2 from results.txt if BS is -999
+
 ## [1.3.0] - 2025-12-13
 
 ### Added
